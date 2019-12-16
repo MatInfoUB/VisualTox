@@ -27,7 +27,7 @@ training = model.fit(X, y, output=True)
 new_data = create_new_predicted_data(new_data, X, model, class_name)
 name = '2-Amino-5-azotoluene'
 
-ind = np.where(new_data.Name == name)[0]
+ind = np.where(new_data.Name == name)[0][0]
 smiles = new_data.Canonical.iloc[ind]
 
 mol = Chem.MolFromSmiles(smiles)
