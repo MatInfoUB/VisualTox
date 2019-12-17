@@ -39,7 +39,7 @@ class Activation:
         heatmap = np.maximum(heatmap, 0)
         heatmap /= np.max(heatmap)
 
-        if heatmap[0] < tol:
+        if heatmap[0] > tol:
             tol = heatmap[0]
         heatmap[heatmap <= tol] = 0
 
