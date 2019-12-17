@@ -3,7 +3,6 @@ import os
 import matplotlib.pyplot as plt
 plt.rcParams['font.size'] = 20
 
-import cv2
 import matplotlib.cm as cm
 
 from rdkit import Chem
@@ -14,7 +13,8 @@ opts.atomLabelFontSize = 110
 opts.dotsPerAngstrom = 200
 opts.bondLineWidth = 6.0
 
-from toxinet import load_training_data, create_new_predicted_data, Classifier
+from toxinet import load_training_data, create_new_predicted_data, \
+    Classifier, Activation
 figdir = os.path.join(os.getcwd(), 'creapp_figs')
 
 X, y, class_name, new_data = load_training_data()
@@ -32,7 +32,6 @@ smiles = new_data.Canonical.iloc[ind]
 
 mol = Chem.MolFromSmiles(smiles)
 
-from diagnostics import Activation
 act = Activation(model)
 
 fact, heatmap, heatmap_org = act.activation_map(smiles, label_index=1)
