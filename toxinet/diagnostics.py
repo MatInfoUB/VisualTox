@@ -28,9 +28,9 @@ class Activation:
         iterate = self.compute_gradient(class_index=class_index, label_index=label_index)
         pooled_grads_value, conv_layer_output_value = iterate([img_tensor])
 
-               if np.sum(pooled_grads_value) == 0.0:
+        if np.sum(pooled_grads_value) == 0.0:
             p = len(pooled_grads_value)
-            pooled_grads_value = np.ones(p)
+        pooled_grads_value = np.ones(p)
 
         pooled_grads_value /= np.sum(pooled_grads_value)
 
