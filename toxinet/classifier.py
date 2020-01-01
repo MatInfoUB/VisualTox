@@ -25,7 +25,7 @@ class Classifier:
 
         self.build_model()
 
-    def build_model(self):
+    def build_model(self, num_output=2):
 
         inp = Input(shape=self.input_shape)
         x = Conv1D(filters=32, kernel_size=3, activation='relu')(inp)
@@ -49,10 +49,16 @@ class Classifier:
         x = Dense(128)(x)
         x = Dropout(0.3)(x)
 
-        output1 = Dense(2, activation='softmax', name=self.class_name[0])(x)
-        output2 = Dense(2, activation='softmax', name=self.class_name[1])(x)
+        if num_output == 1:
+            outputs = Dense(2, activation='softmax', name=self.class_name[1])(x)
+        else:
+            outputs = []
+            for out in range(num_output):
+                outputs.append(Dense(2, activation='softmax', name=self.class_name[0])(x))
+            # output1 = Dense(2, activation='softmax', name=self.class_name[0])(x)
+            # output2 = Dense(2, activation='softmax', name=self.class_name[1])(x)
 
-        model = Model(inp, [output1, output2])
+        model = Model(inp, outputs)
 
         try:
             self.optimizer = getattr(keras.optimizers, self.optimizer)
