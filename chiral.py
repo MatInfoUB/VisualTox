@@ -4,6 +4,7 @@ from keras.preprocessing import sequence
 import os
 
 data = pd.read_csv('data/chiralPairs_ChEMBL23_final_filtered.csv')
+data.insert(0, 'Index', data.index)
 
 input_col = 'rdkitNonIsoCanonSmi'
 output_col = 'Chiral cliff'
@@ -20,6 +21,10 @@ X = sequence.pad_sequences(X, maxlen=maxlen)
 X = X.reshape(len(X), maxlen, 1)
 
 y = data[output_col]
+
+index = data.Index
+
+index = index.drop(index.index[inds])
 y = y.drop(y.index[inds])
 
 from sklearn.preprocessing import LabelEncoder
@@ -44,7 +49,7 @@ y_pred = keras_model.predict(X)
 y_pred = [class_y.argmax(axis=-1) for class_y in y_pred]
 X_new = data[input_col]
 X_new = X_new.drop(X_new.index[inds])
-new_data = pd.DataFrame({'Name': X_new, 'Observed': y_true, 'Predicted': y_pred})
+new_data = pd.DataFrame({'Name': X_new, 'Observed': y_true, 'Predicted': y_pred, 'Index': index})
 new_data['SUM'] = new_data.Observed + new_data.Predicted
 
 chirals = new_data[new_data['SUM'] == 0]
@@ -74,9 +79,10 @@ fig_folder = os.path.join('chiral_results', 'chiral_activations')
 
 tol = 1e-3
 for i in range(30):
+    i
     smiles = chirals.Name.iloc[i]
     mol = Chem.MolFromSmiles(smiles)
-
+    ind = chirals.Index.iloc[i]
     smi = Smile()
     smiles_x = smi.smile_to_sequence(smiles)
     smiles_x = sequence.pad_sequences([smiles_x], maxlen=maxlen)
@@ -105,15 +111,15 @@ for i in range(30):
     im = smi.draw_smile(smiles, highlightmap=heatmap_smiles, cmap='coolwarm')
     ax.imshow(im)
     ax.set_axis_off()
-    plt.savefig(os.path.join(fig_folder, 'chemical_' + str(i)+ '.png'), bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(fig_folder, 'chemical_1' + str(ind)+ '.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
     _, ax = plt.subplots(figsize=(19.2, 10.1))
     for j, (h, s) in enumerate(zip(heatmap_smiles, smiles)):
-        ax.text(j, 0, s, color=cm.coolwarm(h), fontsize=40 * h + 16)
+        ax.text(j, 0, s, color=cm.coolwarm(h), fontsize=20 * h + 16)
     ax.set_xlim((0, len(smiles)))
     ax.set_axis_off()
-    plt.savefig(os.path.join(fig_folder, 'chemical_' + str(i) + '_activations.png'), bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(fig_folder, 'chemical_1' + str(ind) + '_activations.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
 
