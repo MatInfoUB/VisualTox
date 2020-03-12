@@ -1,8 +1,8 @@
 from keras import backend as K
 import numpy as np
-from utils import Smile
+from .utils import Smile
 from keras.preprocessing import sequence
-import cv2
+from scipy.interpolate import interp1d
 
 
 class Activation:
@@ -30,7 +30,7 @@ class Activation:
 
         if np.sum(pooled_grads_value) == 0.0:
             p = len(pooled_grads_value)
-        pooled_grads_value = np.ones(p)
+            pooled_grads_value = np.ones(p)
 
         pooled_grads_value /= np.sum(pooled_grads_value)
 
@@ -57,7 +57,11 @@ class Activation:
         img_tensor = smiles_x[0].reshape(1, maxlen, 1)
         heatmap, heatmap_org = self.generate_heatmap(img_tensor, class_index=class_index, label_index=label_index, tol=tol)
 
-        hm = cv2.resize(heatmap, (1, len(smiles)))
+        x_org = np.linspace(0, 1, len(heatmap))
+        x_new = np.linspace(0, 1, len(smiles))
+        f1 = interp1d(x_org, heatmap, kind='nearest')
+
+        hm = f1(x_new)
         hm = hm.reshape(hm.size)
 
         fact = float(len(heatmap)) / float(len(smiles))

@@ -1,5 +1,5 @@
 from rdkit import Chem, DataStructs
-from gensim.models import Word2Vec
+#from gensim.models import Word2Vec
 import numpy as np
 from rdkit.Chem import rdMolDescriptors
 from rdkit.Chem.Draw import DrawingOptions
@@ -25,16 +25,14 @@ class Smile:
         self.smi2index = dict((c, i) for i, c in enumerate(self.SMILES_CHARS))
         self.index2smi = dict((i, c) for i, c in enumerate(self.SMILES_CHARS))
 
-
-    def train_smiles(self, smile_file='data/smiles'):
-
-        smiles = open(smile_file, 'rb').read().split('\n')
-        smiles.pop()
-        can_smi = [Chem.MolToSmiles(Chem.MolFromSmiles(smi),
-                                    isomericSmiles=True, canonical=True) for smi in smiles]
-        model = Word2Vec([can_smi], size=100, window=5, min_count=1)
-        self.model = model
-
+    # def train_smiles(self, smile_file='data/smiles'):
+    #
+    #     smiles = open(smile_file, 'rb').read().split('\n')
+    #     smiles.pop()
+    #     can_smi = [Chem.MolToSmiles(Chem.MolFromSmiles(smi),
+    #                                 isomericSmiles=True, canonical=True) for smi in smiles]
+    #     model = Word2Vec([can_smi], size=100, window=5, min_count=1)
+    #     self.model = model
 
     def smile_to_sequence(self, smile, embed=False, maxlen=120):
 
@@ -44,11 +42,9 @@ class Smile:
         ex = maxlen - len(inds)
         return np.r_[np.zeros(ex/2), inds, np.zeros(ex - ex/2)]
 
-
     def smiles_to_sequences(self, smiles, embed=False, maxlen=120):
 
         return np.asarray([self.smile_to_sequence(smile, embed=embed, maxlen=maxlen) for smile in smiles])
-
 
     def smile_to_vector(self, smiles):
 
@@ -101,8 +97,3 @@ class Smile:
             im = Chem.Draw.MolToImage(mol, size=(3840, 2160), options=opts, highlightMap=colors)
 
         return im
-
-
-
-
-

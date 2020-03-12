@@ -54,7 +54,7 @@ class Classifier:
         else:
             outputs = []
             for out in range(num_output):
-                outputs.append(Dense(2, activation='softmax', name=self.class_name[0])(x))
+                outputs.append(Dense(2, activation='softmax', name=self.class_name[out])(x))
             # output1 = Dense(2, activation='softmax', name=self.class_name[0])(x)
             # output2 = Dense(2, activation='softmax', name=self.class_name[1])(x)
 
