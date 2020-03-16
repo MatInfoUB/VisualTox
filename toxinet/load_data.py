@@ -152,3 +152,26 @@ def load_evaluation_data(class_name=None):
     y = [y_1, y_2]
 
     return X, y, new_data
+
+def load_prediction_data(class_name=None):
+
+    complete_data = pd.read_excel('data/ER_predictionSet.xlsx')
+    complete_data = complete_data[['CHEMICAL NAME', 'Canonical_SMI']]
+
+    inds = [isinstance(d, str) for d in complete_data['CHEMICAL NAME']]
+    complete_data = complete_data[inds]
+
+    complete_data['CHEMICAL NAME'] = complete_data['CHEMICAL NAME'].apply(lambda x:x.split('|')[0])
+
+    new_data = pd.DataFrame({'Name': complete_data['CHEMICAL NAME'], 'Canonical': complete_data['Canonical_SMI']})
+
+    smi = Smile()
+    X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
+
+    maxlen = 130
+
+    X = sequence.pad_sequences(X, maxlen=maxlen)
+    X = X.astype(np.float32) / (np.float32(smi.max_num))
+    X = X.reshape(len(X), maxlen, 1)
+
+    return X, new_data
