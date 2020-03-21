@@ -79,7 +79,7 @@ class Classifier:
         X_train, X_test, y_1_train, y_1_test, y_2_train, y_2_test = train_test_split(X, y_1, y_2, test_size=0.3)
 
         self.batch_size = len(X)
-        self.training = self.model.fit(X, [y_1, y_2], verbose=1, batch_size=len(X),
+        self.training = self.model.fit(X_train, [y_1_train, y_2_train], verbose=1, batch_size=len(X),
                              epochs=self.epochs, validation_data=(X_test, [y_1_test, y_2_test]))
 
         if output:
