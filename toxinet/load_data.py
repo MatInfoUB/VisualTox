@@ -5,9 +5,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 from .utils import Smile
+from rdkit import Chem
 
 
-def load_training_data(corr_plot=False, figdir=None, balanced=True):
+def load_training_data(corr_plot=False, figdir=None, balanced=True, augment=False):
 
     complete_data = pd.read_excel('data/ER_trainingSet.xlsx')
     canonical_smiles = complete_data['Canonical']
@@ -34,20 +35,14 @@ def load_training_data(corr_plot=False, figdir=None, balanced=True):
     num_classes_2 = 2
 
     if balanced:
-        n_samp = data[class_name[1]].value_counts().min()
-        inds = []
-        for label in data[class_name[1]].value_counts().index:
-            ind = np.where(data[class_name[1]] == label)[0]
-            if len(ind) == n_samp:
-                inds.append(data.loc[ind])
-            else:
-                inds.append(data.loc[np.random.choice(ind, n_samp)])
-
-        new_data = pd.concat(inds)
+        new_data = data[balance_data(data, class_name, class_label=1)]
     else:
         new_data = data
-    X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
 
+    if augment:
+        new_data = data_augmenter(new_data, num_generator=10)
+
+    X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
     maxlen = 130
     X = sequence.pad_sequences(X, maxlen=maxlen)
     X = X.astype(np.float32) / (np.float32(smi.max_num))
@@ -59,6 +54,22 @@ def load_training_data(corr_plot=False, figdir=None, balanced=True):
     y = [y_1, y_2]
 
     return X, y, class_name, new_data
+
+
+def balance_data(data, class_name, class_label):
+
+    n_samp = data[class_name[class_label]].value_counts().min()
+    inds = np.zeros(len(data), dtype='bool')
+    for label in data[class_name[class_label]].value_counts().index:
+        ind = np.where(data[class_name[class_label]] == label)[0]
+        if len(ind) == n_samp:
+            inds[ind] = True
+        else:
+            ii = np.random.choice(ind, n_samp, replace=False)
+            inds[ii] = True
+
+    return inds
+
 
 
 def plot_corr_diag(corr, labels, figdir):
@@ -153,7 +164,8 @@ def load_evaluation_data(class_name=None):
 
     return X, y, new_data
 
-def load_prediction_data(class_name=None):
+
+def load_prediction_data():
 
     complete_data = pd.read_excel('data/ER_predictionSet.xlsx')
     complete_data = complete_data[['CHEMICAL NAME', 'Canonical_SMI']]
@@ -175,3 +187,62 @@ def load_prediction_data(class_name=None):
     X = X.reshape(len(X), maxlen, 1)
 
     return X, new_data
+
+
+def smiles_augmenter(smiles, num_generator=10, shuffle_limit=1000):
+
+    mol = Chem.MolFromSmiles(smiles)
+    num_atoms = mol.GetNumAtoms()
+
+    smiles_set = []
+    if num_atoms < 4:
+        from itertools import permutations
+        perms = list(permutations(range(num_atoms)))
+        for p in perms:
+            smiles_set.append(
+                Chem.MolToSmiles(Chem.RenumberAtoms(mol, p),
+                                 canonical=False, isomericSmiles=True))
+
+        return smiles_set
+
+    count = 0
+    while len(smiles_set) < num_generator:
+        p = np.random.permutation(range(num_atoms))
+        new_smiles = Chem.MolToSmiles(
+            Chem.RenumberAtoms(mol, p.tolist()),
+            canonical=False, isomericSmiles=True)
+        if new_smiles not in smiles_set:
+            smiles_set.append(new_smiles)
+
+        count += 1
+        if count == shuffle_limit:
+            break
+
+    return smiles_set
+
+
+def data_augmenter(data, num_generator=10):
+
+    smiles_new = []
+    names_new = []
+    y1_new = []
+    y2_new = []
+
+    for i in range(len(data)):
+        datum = data.iloc[i]
+        name = datum['Name']
+        smiles = datum['Canonical']
+        ag_cl = datum['Agonist_Class']
+        bi_cl = datum['Binding_Class']
+
+        smiles_set = smiles_augmenter(smiles, num_generator=num_generator)
+        y1_new.append(pd.Series([ag_cl] * len(smiles_set)))
+        y2_new.append(pd.Series([bi_cl] * len(smiles_set)))
+        smiles_new.append(pd.Series(smiles_set))
+        names_new.append(pd.Series([name] * len(smiles_set)))
+
+    return pd.DataFrame({'Name': pd.concat(names_new),
+                         'Canonical':pd.concat(smiles_new),
+                         'Agonist_Class': pd.concat(y1_new),
+                         'Binding_Class': pd.concat(y2_new)})
+
