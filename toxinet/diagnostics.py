@@ -56,7 +56,8 @@ class Activation:
 
         img_tensor = smiles_x[0].reshape(1, maxlen, 1)
         heatmap, heatmap_org = self.generate_heatmap(img_tensor, class_index=class_index, label_index=label_index, tol=tol)
-
+        if len(heatmap) < 2:
+            return None, None, None
         x_org = np.linspace(0, 1, len(heatmap))
         x_new = np.linspace(0, 1, len(smiles))
         f1 = interp1d(x_org, heatmap, kind='nearest')

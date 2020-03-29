@@ -30,17 +30,18 @@ class Classifier:
         inp = Input(shape=self.input_shape)
         x = Conv1D(filters=32, kernel_size=3, activation='relu')(inp)
         # x = Conv1D(filters=32, kernel_size=3, activation='relu', kernel_regularizer='l2')(x)
-        x = Dropout(0.3)(x)
+        x = Dropout(0.5)(x)
         x = MaxPooling1D(pool_size=2)(x)
         x = Conv1D(filters=64, kernel_size=3, activation='relu')(x)
         # x = Conv1D(filters=32, kernel_size=3, activation='relu')(x)
-        x = Dropout(0.3)(x)
+        x = Dropout(0.5)(x)
         x = MaxPooling1D(pool_size=2)(x)
         x = Conv1D(filters=64, kernel_size=3, activation='relu')(x)
         # x = Conv1D(filters=32, kernel_size=3, activation='relu')(x)
-        x = Dropout(0.3)(x)
+        x = Dropout(0.5)(x)
         x = MaxPooling1D(pool_size=2)(x)
         x = Conv1D(filters=64, kernel_size=3, activation='relu')(x)
+        x = Dropout(0.5)(x)
         x = Flatten()(x)
         x = Dense(128)(x)
         x = Dropout(0.3)(x)
@@ -73,17 +74,23 @@ class Classifier:
 
         self.model = model
 
-    def fit(self, X, y, sample_weight=None, output=False):
+    def fit(self, X, y, sample_weight=None, output=False, verbose=1, X_test=None, y_test=None):
 
         y_1, y_2 = y
-        X_train, X_test, y_1_train, y_1_test, y_2_train, y_2_test = train_test_split(X, y_1, y_2, test_size=0.3)
+        if X_test is None:
+            X_train, X_test, y_1_train, y_1_test, y_2_train, y_2_test = train_test_split(X, y_1, y_2, test_size=0.3)
+        else:
+            X_train = X
+            y_1_train = y_1
+            y_2_train = y_2
+            y_1_test, y_2_test = y_test
 
-        self.batch_size = len(X)
-        self.training = self.model.fit(X_train, [y_1_train, y_2_train], verbose=1, batch_size=len(X),
+        # self.batch_size = len(X)
+        self.training = self.model.fit(X_train, [y_1_train, y_2_train], verbose=verbose, batch_size=self.batch_size,
                              epochs=self.epochs, validation_data=(X_test, [y_1_test, y_2_test]))
 
         if output:
-            return self.training
+            return self.training, X_test, [y_1_test, y_2_test]
 
     def predict(self, X):
 
