@@ -18,7 +18,7 @@ input_shape = X.shape[1:]
 model = ConvLSTMToxinet(epochs=3000, input_shape=input_shape,
                    class_name=class_name, batch_size=2000, learning_rate=0.005)
 y_test = [y_1_test, y_2_test]
-model.model = load_model('results/no_al.h5')
+model.model = load_model('results/al_model_lstm.h5')
 
 from sklearn.metrics import roc_curve, auc
 from sklearn.metrics import average_precision_score, precision_recall_curve
