@@ -5,6 +5,8 @@ The package provides two major functions:
 - Train a Conv+LSTM model with active learning.
 - Generate Chemical Activation Map for an example chemical
 
+![](activation_flow.png)
+
 ##  Prerequisites
 
 This package requires:
