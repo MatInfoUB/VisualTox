@@ -18,6 +18,11 @@ def load_training_data(corr_plot=False, figdir=None, balanced=True, augment=Fals
 
     classes = ['Agonist_Class', 'Antagonist_Class', 'Binding_Class']
 
+    # 0: Inactive, 1: Active
+    for cl in classes:
+        complete_data[cl][complete_data[cl] == 0] = 'Inactive'
+        complete_data[cl][complete_data[cl] == 1] = 'Active'
+
     labels = [' '.join(c.split('_')) for c in classes]
     if corr_plot:
         corr = complete_data[classes].corr()
@@ -48,16 +53,36 @@ def load_training_data(corr_plot=False, figdir=None, balanced=True, augment=Fals
     X = X.astype(np.float32) / (np.float32(smi.max_num))
     X = X.reshape(len(X), maxlen, 1)
 
-    y_1 = pd.get_dummies(new_data[class_name[0]])
-    y_2 = pd.get_dummies(new_data[class_name[1]])
+    # y_1 = pd.get_dummies(new_data[class_name[0]])
+    # y_2 = pd.get_dummies(new_data[class_name[1]])
 
-    y = [y_1, y_2]
+    y = [new_data[cl] for cl in class_name]
 
     return X, y, class_name, new_data
 
 
+def extract_x_y(data, class_names):
+
+    smi = Smile()
+    X = smi.smiles_to_sequences(data.Canonical, embed=False)
+
+    maxlen = 130
+
+    X = sequence.pad_sequences(X, maxlen=maxlen)
+    X = X.astype(np.float32) / (np.float32(smi.max_num))
+    X = X.reshape(len(X), maxlen, 1)
+
+    y_1 = data[class_names[0]]
+    y_2 = data[class_names[1]]
+
+    y = [y_1, y_2]
+
+    return X, y
+
+
 def balance_data(data, class_name, class_label):
 
+    np.random.seed(0)
     n_samp = data[class_name[class_label]].value_counts().min()
     inds = np.zeros(len(data), dtype='bool')
     for label in data[class_name[class_label]].value_counts().index:
@@ -69,7 +94,6 @@ def balance_data(data, class_name, class_label):
             inds[ii] = True
 
     return inds
-
 
 
 def plot_corr_diag(corr, labels, figdir):
@@ -106,47 +130,34 @@ def imbalance_plot(data, figdir):
     for (ax, cl) in zip(axes.flat, classes):
         name = ' '.join(cl.split('_'))
         S = pd.Series(data[cl], name=name)
-        S.value_counts().plot.pie(explode=explode, ax=ax, startangle=90,
-           autopct='%1.1f%%')
+        S.value_counts().plot.pie(explode=explode, ax=ax, startangle=90, autopct='%1.1f%%',
+                                  textprops=dict(color="w"))
         ax.axis('equal')
 
     plt.savefig(os.path.join(figdir, 'imbalace.png'), bbox_inches='tight', dpi=300)
 
 
-def load_evaluation_data(class_name=None):
+def load_evaluation_data(class_name=None, balanced=False, augment=False):
 
-    complete_data = pd.read_excel('data/ER_evaluationSet.xlsx')
-    ind = [',' not in name for name in complete_data.COMPOUND_NAME]
+    new_data = pd.read_csv('data/0422_evaluation_set_agonist&binding.csv').drop('Unnamed: 0', axis=1)
+    # ind = [',' not in name for name in complete_data.Name]
+    #
+    # complete_data = complete_data[ind]
+    # complete_data = complete_data[['Mode', 'COMPOUND_NAME', 'STANDERDIZED_CANO_SMI']]
 
-    complete_data = complete_data[ind]
-    complete_data = complete_data[['Mode', 'COMPOUND_NAME', 'STANDERDIZED_CANO_SMI']]
 
-    complete_data['COMPOUND_NAME'] = complete_data['COMPOUND_NAME'].apply(lambda x: x[:-3])
-    complete_data['COMPOUND_NAME'] = complete_data['COMPOUND_NAME'].str.title()
+    for cl in class_name:
+        new_data[cl][new_data[cl] == 0] = 'Inactive'
+        new_data[cl][new_data[cl] == 1] = 'Active'
 
-    table = np.zeros((complete_data['STANDERDIZED_CANO_SMI'].nunique(), 3), dtype=np.int8)
-    # Names = complete_data['COMPOUND_NAME'].unique().tolist()
-    Smiles = pd.Series(complete_data['STANDERDIZED_CANO_SMI'].unique())
 
-    from sklearn.preprocessing import LabelEncoder
-    classes = LabelEncoder().fit_transform(complete_data['Mode'])
+    if balanced:
+        new_data = new_data[balance_data(new_data, class_name, class_label=0)]
+    else:
+        new_data = new_data
 
-    Names = []
-    Smiles_completed = []
-    for i, cl in enumerate(classes):
-        smi = complete_data['STANDERDIZED_CANO_SMI'].iloc[i]
-        ind = Smiles.to_list().index(smi)
-        table[ind, cl] = 1
-
-        name = complete_data['COMPOUND_NAME'].iloc[i]
-        if smi not in Smiles_completed:
-            Smiles_completed.append(smi)
-            Names.append(name)
-
-    Names = pd.Series(Names)
-    new_data = pd.DataFrame({'Name': Names, 'Canonical': Smiles, 'Agonist_Class': table[:, 0],
-                             'Binding_Class': table[:, 2]})
-
+    if augment:
+        new_data = data_augmenter(new_data, num_generator=10)
 
     smi = Smile()
     X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
@@ -157,8 +168,8 @@ def load_evaluation_data(class_name=None):
     X = X.astype(np.float32) / (np.float32(smi.max_num))
     X = X.reshape(len(X), maxlen, 1)
 
-    y_1 = pd.get_dummies(new_data[class_name[0]])
-    y_2 = pd.get_dummies(new_data[class_name[1]])
+    y_1 = new_data[class_name[0]]
+    y_2 = new_data[class_name[1]]
 
     y = [y_1, y_2]
 
@@ -176,6 +187,11 @@ def load_prediction_data():
     complete_data['CHEMICAL NAME'] = complete_data['CHEMICAL NAME'].apply(lambda x:x.split('|')[0])
 
     new_data = pd.DataFrame({'Name': complete_data['CHEMICAL NAME'], 'Canonical': complete_data['Canonical_SMI']})
+    new_data['Smile_length'] = new_data['Canonical'].apply(lambda x:len(x))
+
+    new_data = new_data[new_data['Smile_length'] < 130]
+
+    new_data = new_data.sort_values(by='Smile_length', ascending=False)
 
     smi = Smile()
     X = smi.smiles_to_sequences(new_data.Canonical, embed=False)

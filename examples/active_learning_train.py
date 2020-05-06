@@ -2,11 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 plt.rcParams['font.size'] = 20
-import pandas as pd
 
-import matplotlib.cm as cm
-
-from rdkit import Chem
 from rdkit.Chem import Draw
 
 opts = Draw.DrawingOptions()
@@ -14,8 +10,7 @@ opts.atomLabelFontSize = 110
 opts.dotsPerAngstrom = 200
 opts.bondLineWidth = 6.0
 
-from toxinet import load_training_data, create_new_predicted_data, \
-    ConvLSTMToxinet, Activation, EntropySelection, load_evaluation_data, balance_data
+from toxinet import load_training_data, ConvLSTMToxinet, EntropySelection, load_evaluation_data
 pred_figdir = os.path.join(os.getcwd(), 'figdir', 'prediction')
 
 from sklearn.preprocessing import LabelEncoder
