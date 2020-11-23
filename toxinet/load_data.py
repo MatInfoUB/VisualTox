@@ -7,14 +7,16 @@ import os
 from .utils import Smile
 from rdkit import Chem
 
+from sklearn.model_selection import train_test_split
 
-def load_training_data(corr_plot=False, figdir=None, balanced=True, augment=False):
+
+def load_training_data(corr_plot=False, figdir=None, balanced=True, augment=False, train_size=None):
 
     complete_data = pd.read_excel('data/ER_trainingSet.xlsx')
-    canonical_smiles = complete_data['Canonical']
-    y_agonist = complete_data['Agonist_Class']
-    y_antagonist = complete_data['Antagonist_Class']
-    y_binding = complete_data['Binding_Class']
+    # canonical_smiles = complete_data['Canonical']
+    # y_agonist = complete_data['Agonist_Class']
+    # y_antagonist = complete_data['Antagonist_Class']
+    # y_binding = complete_data['Binding_Class']
 
     classes = ['Agonist_Class', 'Antagonist_Class', 'Binding_Class']
 
@@ -44,21 +46,49 @@ def load_training_data(corr_plot=False, figdir=None, balanced=True, augment=Fals
     else:
         new_data = data
 
+    new_data_train = None
+    new_data_test = None
+
+    if train_size is not None:
+        idx_train, idx_test = train_test_split(range(len(new_data)), train_size=train_size)
+        new_data_train = new_data.iloc[idx_train]
+        new_data_test = new_data.iloc[idx_test]
+
     if augment:
-        new_data = data_augmenter(new_data, num_generator=10)
+        if train_size is None:
+            new_data = data_augmenter(new_data, num_generator=10)
+        else:
+            new_data_train = data_augmenter(new_data_train, num_generator=10)
+            new_data_test = data_augmenter(new_data_test, num_generator=10)
 
-    X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
-    maxlen = 130
-    X = sequence.pad_sequences(X, maxlen=maxlen)
-    X = X.astype(np.float32) / (np.float32(smi.max_num))
-    X = X.reshape(len(X), maxlen, 1)
+    if train_size is None:
+        X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
+        maxlen = 130
+        X = sequence.pad_sequences(X, maxlen=maxlen)
+        X = X / smi.max_num
+        X = X.reshape(len(X), maxlen, 1)
 
-    # y_1 = pd.get_dummies(new_data[class_name[0]])
-    # y_2 = pd.get_dummies(new_data[class_name[1]])
+        # y_1 = pd.get_dummies(new_data[class_name[0]])
+        # y_2 = pd.get_dummies(new_data[class_name[1]])
 
-    y = [new_data[cl] for cl in class_name]
+        y = [new_data[cl] for cl in class_name]
+        return X, y, class_name, new_data
+    else:
+        X_train = smi.smiles_to_sequences(new_data_train.Canonical, embed=False)
+        maxlen = 130
+        X = sequence.pad_sequences(X_train, maxlen=maxlen)
+        X_train = X_train / smi.max_num
+        X_train = X_train.reshape(len(X_train), maxlen, 1)
+        y_train = [new_data_train[cl] for cl in class_name]
 
-    return X, y, class_name, new_data
+        X_test = smi.smiles_to_sequences(new_data_test.Canonical, embed=False)
+        maxlen = 130
+        X_test = sequence.pad_sequences(X_test, maxlen=maxlen)
+        X_test = X_test / smi.max_num
+        X_test = X_test.reshape(len(X_test), maxlen, 1)
+        y_test = [new_data_test[cl] for cl in class_name]
+
+        return X_train, X_test, y_train, y_test, class_name, new_data_train, new_data_test
 
 
 def extract_x_y(data, class_names):
@@ -262,3 +292,10 @@ def data_augmenter(data, num_generator=10):
                          'Agonist_Class': pd.concat(y1_new),
                          'Binding_Class': pd.concat(y2_new)})
 
+
+def combined_data():
+
+    _, _, class_name, train_data = load_training_data(balanced=True, augment=True)
+    _, _, val_data = load_evaluation_data(class_name, balanced=True, augment=True)
+
+    return extract_x_y(train_data.append(val_data), class_name)
