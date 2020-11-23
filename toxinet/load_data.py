@@ -76,7 +76,7 @@ def load_training_data(corr_plot=False, figdir=None, balanced=True, augment=Fals
     else:
         X_train = smi.smiles_to_sequences(new_data_train.Canonical, embed=False)
         maxlen = 130
-        X = sequence.pad_sequences(X_train, maxlen=maxlen)
+        X_train = sequence.pad_sequences(X_train, maxlen=maxlen)
         X_train = X_train / smi.max_num
         X_train = X_train.reshape(len(X_train), maxlen, 1)
         y_train = [new_data_train[cl] for cl in class_name]
@@ -167,7 +167,7 @@ def imbalance_plot(data, figdir):
     plt.savefig(os.path.join(figdir, 'imbalace.png'), bbox_inches='tight', dpi=300)
 
 
-def load_evaluation_data(class_name=None, balanced=False, augment=False):
+def load_evaluation_data(class_name=None, balanced=False, augment=False, train_size=None):
 
     new_data = pd.read_csv('data/0422_evaluation_set_agonist&binding.csv').drop('Unnamed: 0', axis=1)
     # ind = [',' not in name for name in complete_data.Name]
@@ -186,24 +186,50 @@ def load_evaluation_data(class_name=None, balanced=False, augment=False):
     else:
         new_data = new_data
 
+    new_data_train = None
+    new_data_test = None
+
+    if train_size is not None:
+        idx_train, idx_test = train_test_split(range(len(new_data)), train_size=train_size)
+        new_data_train = new_data.iloc[idx_train]
+        new_data_test = new_data.iloc[idx_test]
+
     if augment:
-        new_data = data_augmenter(new_data, num_generator=10)
+        if train_size is None:
+            new_data = data_augmenter(new_data, num_generator=10)
+        else:
+            new_data_train = data_augmenter(new_data_train, num_generator=10)
+            new_data_test = data_augmenter(new_data_test, num_generator=10)
 
     smi = Smile()
-    X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
+    if train_size is None:
+        X = smi.smiles_to_sequences(new_data.Canonical, embed=False)
+        maxlen = 130
+        X = sequence.pad_sequences(X, maxlen=maxlen)
+        X = X / smi.max_num
+        X = X.reshape(len(X), maxlen, 1)
 
-    maxlen = 130
+        # y_1 = pd.get_dummies(new_data[class_name[0]])
+        # y_2 = pd.get_dummies(new_data[class_name[1]])
 
-    X = sequence.pad_sequences(X, maxlen=maxlen)
-    X = X.astype(np.float32) / (np.float32(smi.max_num))
-    X = X.reshape(len(X), maxlen, 1)
+        y = [new_data[cl] for cl in class_name]
+        return X, y, class_name, new_data
+    else:
+        X_train = smi.smiles_to_sequences(new_data_train.Canonical, embed=False)
+        maxlen = 130
+        X_train = sequence.pad_sequences(X_train, maxlen=maxlen)
+        X_train = X_train / smi.max_num
+        X_train = X_train.reshape(len(X_train), maxlen, 1)
+        y_train = [new_data_train[cl] for cl in class_name]
 
-    y_1 = new_data[class_name[0]]
-    y_2 = new_data[class_name[1]]
+        X_test = smi.smiles_to_sequences(new_data_test.Canonical, embed=False)
+        maxlen = 130
+        X_test = sequence.pad_sequences(X_test, maxlen=maxlen)
+        X_test = X_test / smi.max_num
+        X_test = X_test.reshape(len(X_test), maxlen, 1)
+        y_test = [new_data_test[cl] for cl in class_name]
 
-    y = [y_1, y_2]
-
-    return X, y, new_data
+        return X_train, X_test, y_train, y_test, class_name, new_data_train, new_data_test
 
 
 def load_prediction_data():
