@@ -1,13 +1,15 @@
-from keras.models import Input, Model
-from keras.layers import Conv1D, MaxPooling1D, Dense, Flatten, Dropout, BatchNormalization, LSTM
-import keras.optimizers
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Conv1D, MaxPooling1D, \
+    Dense, Flatten, Dropout, BatchNormalization, LSTM
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 
 class Classifier:
 
     def __init__(self, random_state=None, epochs=500,
-                 batch_size=32, input_shape=None, class_name=None, model=None,
+                 batch_size=32, input_shape=None, class_name=None, model=None, num_classes=2,
                  optimizer='Adam', learning_rate=0.001, loss='binary_crossentropy', num_outputs=2):
 
         self.random_state = random_state
@@ -19,8 +21,9 @@ class Classifier:
         self.learning_rate = learning_rate
         self.model = model
         self.num_outputs = num_outputs
+        self.num_classes=num_classes
         try:
-            self.optimizer = getattr(keras.optimizers, optimizer)
+            self.optimizer = getattr(tf.keras.optimizers, optimizer)
         except:
             raise NotImplementedError('optimizer not implemented in keras')
 
@@ -35,13 +38,16 @@ class Classifier:
 
     def compile(self):
 
+        opt = self.optimizer(learning_rate=self.learning_rate)
 
-        opt = self.optimizer(lr=self.learning_rate)
-        losses = {self.class_name[0]: self.loss,
-                  self.class_name[1]: self.loss}
+        if self.num_outputs == 1:
+            self.model.compile(optimizer=opt, loss=self.loss, metrics=['accuracy'])
+        else:
+            losses = {self.class_name[0]: self.loss,
+                      self.class_name[1]: self.loss}
 
-        self.model.compile(optimizer=opt, loss=losses, loss_weights=[0.5, 0.5],
-                      metrics=['accuracy'])
+            self.model.compile(optimizer=opt, loss=losses, loss_weights=[0.5, 0.5],
+                               metrics=['accuracy'])
 
     def fit(self, X, y, sample_weight=None, output=False, verbose=1, X_test=None, y_test=None, random_state=0):
 
@@ -89,7 +95,7 @@ class Classifier:
 class ConvToxinet(Classifier):
 
     def __init__(self, random_state=None, epochs=500,
-                 batch_size=32, input_shape=None, class_name=None, model=None,
+                 batch_size=32, input_shape=None, class_name=None, model=None, num_classes=2,
                  optimizer='Adam', learning_rate=0.001, loss='binary_crossentropy', num_outputs=2):
 
         Classifier.__init__(self, random_state=random_state,
@@ -100,6 +106,7 @@ class ConvToxinet(Classifier):
                             optimizer=optimizer,
                             batch_size=batch_size,
                             learning_rate=learning_rate,
+                            num_classes=num_classes,
                             loss=loss,
                             num_outputs=num_outputs)
 
@@ -140,7 +147,7 @@ class ConvToxinet(Classifier):
         x = BatchNormalization(axis=-1)(x)
 
         if self.num_outputs == 1:
-            outputs = Dense(1, activation='sigmoid', name=self.class_name[1])(x)
+            outputs = Dense(1, activation='sigmoid', name=self.class_name)(x)
         else:
             outputs = []
             for out in range(self.num_outputs):
@@ -152,7 +159,7 @@ class ConvToxinet(Classifier):
 class ConvLSTMToxinet(Classifier):
 
     def __init__(self, random_state=None, epochs=500,
-                 batch_size=32, input_shape=None, class_name=None, model=None,
+                 batch_size=32, input_shape=None, class_name=None, model=None, num_classes=2,
                  optimizer='Adam', learning_rate=0.001, loss='binary_crossentropy', num_outputs=2):
 
         Classifier.__init__(self, random_state=random_state,
@@ -162,6 +169,7 @@ class ConvLSTMToxinet(Classifier):
                             model=model,
                             optimizer=optimizer,
                             batch_size=batch_size,
+                            num_classes=num_classes,
                             learning_rate=learning_rate,
                             loss=loss,
                             num_outputs=num_outputs)
@@ -205,7 +213,10 @@ class ConvLSTMToxinet(Classifier):
         x = BatchNormalization(axis=-1)(x)
 
         if self.num_outputs == 1:
-            outputs = Dense(1, activation='sigmoid', name=self.class_name[1])(x)
+            if self.num_classes == 2:
+                outputs = Dense(1, activation='sigmoid', name=self.class_name)(x)
+            else:
+                outputs = Dense(self.num_classes, activation='softmax', name=self.class_name)(x)
         else:
             outputs = []
             for out in range(self.num_outputs):

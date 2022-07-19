@@ -1,7 +1,7 @@
-from keras import backend as K
+from tensorflow.keras import backend as K
 import numpy as np
 from .utils import Smile
-from keras.preprocessing import sequence
+from tensorflow.keras.preprocessing import sequence
 from scipy.interpolate import interp1d
 from sklearn.preprocessing import normalize
 
