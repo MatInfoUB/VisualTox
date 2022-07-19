@@ -16,7 +16,7 @@ opts.bondLineWidth = 6.0
 
 from toxinet.load_data import *
 from toxinet import Activation, Classifier
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 
 model = Classifier(model=load_model('results/al_model_lstm.h5'))
 act = Activation(model)

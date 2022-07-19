@@ -1,5 +1,3 @@
-keras
 scikit-learn
 rdkit
-gensim
-tensorflow-gpu
+tensorflow
